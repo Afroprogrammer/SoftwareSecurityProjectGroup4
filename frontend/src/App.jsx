@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Feedback from './pages/Feedback';
 import Navigation from './components/Navigation';
 
 // Simple Auth Guard
@@ -31,12 +30,6 @@ function App() {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/feedback" element={
-          <ProtectedRoute>
-            <Feedback />
           </ProtectedRoute>
         } />
         

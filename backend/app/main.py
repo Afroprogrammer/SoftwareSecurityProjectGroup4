@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import auth, feedback # Added routers import
+from app.routers import auth
 
 app = FastAPI(
     title="Secure Software Design Application",
@@ -24,14 +24,12 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-app.include_router(feedback.router)
 
 @app.on_event("startup")
 async def startup_event():
     # In a real app, use Alembic for migrations. 
     # For this project, we can create tables directly for simplicity.
     from app.models.user import User, AuditLog
-    from app.models.feedback import Feedback
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

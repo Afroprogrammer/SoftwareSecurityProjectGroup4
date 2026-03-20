@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from dotenv import load_dotenv
 
-# In production, use environment variables and load securely
-SECRET_KEY = os.getenv("SECRET_KEY", "b30fb0f0e0ab7d0794ce517f699026da6dd42fb138d6df24e104e7696f53caac")
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is not set!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

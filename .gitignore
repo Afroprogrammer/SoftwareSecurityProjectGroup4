@@ -28,3 +28,10 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+.env
+backend/.env
+frontend/.env
+logs/
+backend/logs/
+uvicorn.log

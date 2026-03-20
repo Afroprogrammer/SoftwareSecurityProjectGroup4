@@ -1,3 +1,6 @@
+import logging
+import os
+from logging.handlers import RotatingFileHandler
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,9 +13,30 @@ from app.schemas.user import Token, UserCreate, UserResponse, UserChangePassword
 from app.security.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.security.deps import get_current_active_user, get_current_admin_user
 
+# Configure Server & File Logging
+audit_logger = logging.getLogger("audit_logger")
+audit_logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+if not audit_logger.handlers:
+    audit_logger.addHandler(stream_handler)
+
+try:
+    log_dir = os.path.join(os.path.dirname(__file__), "..", "..", "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    file_handler = RotatingFileHandler(os.path.join(log_dir, "audit.log"), maxBytes=10*1024*1024, backupCount=5)
+    file_handler.setFormatter(formatter)
+    audit_logger.addHandler(file_handler)
+except Exception as e:
+    audit_logger.warning(f"Failed to initialize file logger: {e}")
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 async def log_audit(db: AsyncSession, action: str, ip: str, details: str = None, user_id: int = None):
+    # Log to flat file & terminal
+    audit_logger.info(f"ACTION: {action} | IP: {ip} | USER_ID: {user_id} | DETAILS: {details}")
+    # Log to SQL Database
     audit_entry = AuditLog(user_id=user_id, action=action, ip_address=ip, details=details)
     db.add(audit_entry)
     await db.commit()
@@ -82,7 +106,7 @@ async def create_user(
     new_user = User(
         email=user_in.email,
         hashed_password=hashed_password,
-        role=user_in.role
+        role="user" # Forcing role to always be 'user' to restrict admin escalation
     )
     db.add(new_user)
     await db.commit()

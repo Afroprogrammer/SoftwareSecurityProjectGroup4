@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Shield, Users, Key, CheckCircle, AlertCircle } from 'lucide-react';
+import { User, Shield, Users, Key, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -10,17 +10,21 @@ const Dashboard = () => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
+  // Change Password Toggles
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  
   // Create User State (Admin Only)
   const [createUserStatus, setCreateUserStatus] = useState({ type: '', msg: '' });
   const [newEmail, setNewEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState('user');
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8000/auth/users/me', {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setUser(response.data);
@@ -42,7 +46,7 @@ const Dashboard = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/auth/change-password', 
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/change-password`, 
         { old_password: oldPassword, new_password: newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -50,7 +54,9 @@ const Dashboard = () => {
       setOldPassword('');
       setNewPassword('');
     } catch (err) {
-      setPassStatus({ type: 'error', msg: err.response?.data?.detail || 'Failed to change password.' });
+      const detail = err.response?.data?.detail;
+      const errorMessage = Array.isArray(detail) ? detail[0].msg : detail;
+      setPassStatus({ type: 'error', msg: errorMessage || 'Failed to change password.' });
     }
   };
 
@@ -65,16 +71,17 @@ const Dashboard = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/auth/users', 
-        { email: newEmail, password: newUserPassword, role: newUserRole },
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/users`, 
+        { email: newEmail, password: newUserPassword, role: "user" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCreateUserStatus({ type: 'success', msg: `User ${newEmail} successfully provisioned.` });
       setNewEmail('');
       setNewUserPassword('');
-      setNewUserRole('user');
     } catch (err) {
-      setCreateUserStatus({ type: 'error', msg: err.response?.data?.detail || 'Failed to allocate user.' });
+      const detail = err.response?.data?.detail;
+      const errorMessage = Array.isArray(detail) ? detail[0].msg : detail;
+      setCreateUserStatus({ type: 'error', msg: errorMessage || 'Failed to allocate user.' });
     }
   };
 
@@ -127,26 +134,47 @@ const Dashboard = () => {
         <form onSubmit={handleChangePassword}>
           <div className="form-group">
             <label className="form-label">Current Password</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              required
-              value={oldPassword}
-              onChange={e => setOldPassword(e.target.value)}
-            />
+            <div style={{ position: 'relative' }}>
+              <input 
+                type={showOldPassword ? "text" : "password"} 
+                className="form-input" 
+                style={{ width: '100%', paddingRight: '2.5rem' }}
+                required
+                value={oldPassword}
+                onChange={e => setOldPassword(e.target.value)}
+              />
+              <div 
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', display: 'flex' }}
+                onClick={() => setShowOldPassword(!showOldPassword)}
+              >
+                {showOldPassword ? <EyeOff size={18} color="var(--text-secondary)" /> : <Eye size={18} color="var(--text-secondary)" />}
+              </div>
+            </div>
           </div>
           <div className="form-group">
             <label className="form-label">New Secure Password</label>
-            <input 
-              type="password" 
-              className="form-input" 
-              required
-              minLength={12}
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-            />
+            <div style={{ position: 'relative', marginBottom: '4px' }}>
+              <input 
+                type={showNewPassword ? "text" : "password"} 
+                className="form-input" 
+                style={{ width: '100%', paddingRight: '2.5rem' }}
+                required
+                minLength={12}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+              />
+              <div 
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', display: 'flex' }}
+                onClick={() => setShowNewPassword(!showNewPassword)}
+              >
+                {showNewPassword ? <EyeOff size={18} color="var(--text-secondary)" /> : <Eye size={18} color="var(--text-secondary)" />}
+              </div>
+            </div>
+            <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+              Password Policy: Min 12 chars. Upper, lower, number, special char.
+            </small>
           </div>
-          <button type="submit" className="btn">Execute Rotation</button>
+          <button type="submit" className="btn">Change Password</button>
         </form>
       </div>
 
@@ -168,7 +196,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+          <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Email Context</label>
               <input 
@@ -181,27 +209,28 @@ const Dashboard = () => {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Initial Credential</label>
-              <input 
-                type="password" 
-                className="form-input" 
-                required
-                minLength={12}
-                value={newUserPassword}
-                onChange={e => setNewUserPassword(e.target.value)}
-              />
+              <div style={{ position: 'relative', marginBottom: '4px' }}>
+                <input 
+                  type={showNewUserPassword ? "text" : "password"} 
+                  className="form-input" 
+                  style={{ width: '100%', paddingRight: '2.5rem' }}
+                  required
+                  minLength={12}
+                  value={newUserPassword}
+                  onChange={e => setNewUserPassword(e.target.value)}
+                />
+                <div 
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', display: 'flex' }}
+                  onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                >
+                  {showNewUserPassword ? <EyeOff size={18} color="var(--text-secondary)" /> : <Eye size={18} color="var(--text-secondary)" />}
+                </div>
+              </div>
+              <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                Policy: Min 12 chars. Must contain uppercase, lowercase, number, and special character.
+              </small>
             </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Assign Policy Role</label>
-              <select 
-                className="form-input" 
-                value={newUserRole}
-                onChange={e => setNewUserRole(e.target.value)}
-              >
-                <option value="user">Standard User (Least Privilege)</option>
-                <option value="admin">Administrator (Superuser)</option>
-              </select>
-            </div>
-            <button type="submit" className="btn" style={{ height: '44px' }}>Provision Record</button>
+            <button type="submit" className="btn" style={{ height: '44px', marginTop: '28px' }}>Provision Record</button>
           </form>
         </div>
       )}
