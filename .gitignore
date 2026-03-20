@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+venv/
+ENV/
+env/
+.env
+
+# Database
+*.sqlite3
+*.db
+secure_app.db
+
+# Uploads
+uploads/
+
+# Node
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# OS
+.DS_Store
+Thumbs.db
