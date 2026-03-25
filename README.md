@@ -47,3 +47,26 @@ npm run dev
 ```
 
 Navigate your browser to `http://localhost:5173`. You can log directly into your system with the `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` you provided to your backend `.env` file!
+
+---
+
+## 🐋 Quickstart with Docker (Recommended for Newbies)
+
+To avoid manually installing Python, Node, and Postgres on your local machine, use our pre-configured Docker cluster!
+
+1. **Install Docker Desktop:** Ensure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is running.
+2. **Duplicate the Environments:**
+   ```bash
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
+3. **Boot the Cluster:**
+   Open your terminal in the root folder (where `docker-compose.yml` is) and run:
+   ```bash
+   docker compose up --build -d
+   ```
+4. **Access the App:**
+   - **Frontend UI:** Open your browser to [http://localhost:5173](http://localhost:5173). The React application is being securely served via an Nginx router.
+   - **Backend API:** FastAPI connects directly to a pristine PostgreSQL database and exposes standard swagger docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+> **Note:** To shut down the cluster and wipe the database securely, simply run `docker compose down -v`.
