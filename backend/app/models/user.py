@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 class User(Base):
@@ -11,6 +12,7 @@ class User(Base):
     role = Column(String, default="user", nullable=False) # 'admin' or 'user'
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    feedbacks = relationship("Feedback", back_populates="user")
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

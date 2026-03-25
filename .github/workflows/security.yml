@@ -1,0 +1,44 @@
+name: SDLC Security Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-scans:
+    runs-on: ubuntu-latest
+    name: SAST and Dependency Analysis
+
+    steps:
+    # 1. Pull down the repository code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # 2. Boot a Python Environment
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    # 3. Install Security Tools and Application Dependencies
+    - name: Install Security Tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
+        pip install bandit safety
+
+    # 4. Perform Static Application Security Testing (SAST)
+    - name: Run Bandit Code Scanner
+      run: |
+        # Recursively analyzes backend logic for hardcoded secrets or logical vulnerabilities
+        # -ll: Only report Medium/High severity
+        # -ii: Only report Medium/High confidence
+        bandit -r backend/app/ -ll -ii
+
+    # 5. Perform Software Composition Analysis (SCA)
+    - name: Run Safety Dependency Scanner
+      run: |
+        # Evaluates requirements.txt against a live database of known malicious packages
+        safety check -r backend/requirements.txt

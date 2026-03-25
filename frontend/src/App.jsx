@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Feedback from './pages/Feedback';
 import Navigation from './components/Navigation';
+import NotFound from './pages/NotFound';
 
 // Simple Auth Guard
 const ProtectedRoute = ({ children }) => {
@@ -33,8 +35,15 @@ function App() {
           </ProtectedRoute>
         } />
         
-        {/* Default Route */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/feedback" element={
+          <ProtectedRoute>
+            <Feedback />
+          </ProtectedRoute>
+        } />
+
+        {/* Strict 404 Catch-All Route */}
+        <Route path="*" element={<Navigate to="/404" replace />} />
+        <Route path="/404" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
