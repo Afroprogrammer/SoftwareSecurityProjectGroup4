@@ -12,6 +12,7 @@ from app.security.encryption import encrypt_field
 from app.models.user import User, AuditLog
 from app.core.logger import log_audit_ledger
 from app.security.rate_limit import limiter
+from app.security.scanner import scan_payload_heuristics
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
 
@@ -72,6 +73,9 @@ async def submit_feedback(
                 detail="File exceeds the 5MB size limit"
             )
 
+        # Trigger Computational Malware Heuristics Engine
+        scan_payload_heuristics(contents, file.filename)
+
         # MIME type check using actual file bytes (not extension)
         kind = filetype.guess(contents)
         mime_type = kind.mime if kind else None
@@ -111,6 +115,9 @@ async def submit_feedback(
         full_path = os.path.join(upload_dir, safe_filename)
         with open(full_path, "wb") as f:
             f.write(contents)
+            
+        # SECURITY MANDATE: Explicitly strip OS execution privileges from the physically stored file natively
+        os.chmod(full_path, 0o600)
 
         file_path = full_path
         original_filename = file.filename
