@@ -60,7 +60,7 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} autoComplete="off">
             <div className="form-group">
               <label className="form-label">Email address</label>
               <div style={{ position: 'relative' }}>
@@ -72,6 +72,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="off"
                   placeholder="you@university.edu"
                 />
               </div>

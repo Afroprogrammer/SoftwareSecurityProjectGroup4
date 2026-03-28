@@ -150,7 +150,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        <form onSubmit={handleChangePassword}>
+        <form onSubmit={handleChangePassword} autoComplete="off">
           <div className="form-group">
             <label className="form-label">Current Password</label>
             <div style={{ position: 'relative' }}>
@@ -159,6 +159,7 @@ const Dashboard = () => {
                 className="form-input" 
                 style={{ width: '100%', paddingRight: '2.5rem' }}
                 required
+                autoComplete="new-password"
                 value={oldPassword}
                 onChange={e => setOldPassword(e.target.value)}
               />
@@ -179,6 +180,7 @@ const Dashboard = () => {
                 style={{ width: '100%', paddingRight: '2.5rem' }}
                 required
                 minLength={12}
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
               />
@@ -215,13 +217,14 @@ const Dashboard = () => {
             </div>
           )}
 
-          <form onSubmit={handleCreateUser} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
+          <form onSubmit={handleCreateUser} autoComplete="off" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">Email Context</label>
               <input 
                 type="email" 
                 className="form-input" 
                 required
+                autoComplete="off"
                 value={newEmail}
                 onChange={e => setNewEmail(e.target.value)}
               />
@@ -234,6 +237,7 @@ const Dashboard = () => {
                   className="form-input" 
                   style={{ width: '100%', paddingRight: '2.5rem' }}
                   required
+                  autoComplete="new-password"
                   minLength={12}
                   value={newUserPassword}
                   onChange={e => setNewUserPassword(e.target.value)}

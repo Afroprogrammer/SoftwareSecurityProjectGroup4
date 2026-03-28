@@ -17,6 +17,9 @@ app = FastAPI(
     title="Secure Software Design Application",
     description="A secure web application for CS 4417/6417.",
     version="1.0.0",
+    docs_url=None,   # Secure Protocol: Disable structural Swagger leaking
+    redoc_url=None,  # Secure Protocol: Disable ReDoc
+    openapi_url=None # Secure Protocol: Mask JSON API surface mapping
 )
 
 # Restrict CORS to specific frontend origin in production
@@ -35,6 +38,17 @@ app.add_middleware(
 # Attach Universal Rate Limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    Global Interceptor: Prevent sensitive DOM/JSON payloads from caching in physically shared browser environments.
+    """
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
