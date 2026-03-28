@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { ShieldCheck, LogOut, MessageSquare } from 'lucide-react';
+import { ShieldCheck, LogOut, UploadCloud } from 'lucide-react';
 import axios from 'axios';
 
 const Navigation = () => {
@@ -31,7 +31,7 @@ const Navigation = () => {
     <nav className="navbar">
       <div className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 'bold' }}>
         <ShieldCheck color="var(--accent-primary)" />
-        SecureApp
+        LoremIpsum Secure
       </div>
       <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {role === 'user' && (
@@ -44,7 +44,7 @@ const Navigation = () => {
               transition: 'color 0.2s',
             })}
           >
-            <MessageSquare size={16} /> Feedback
+            <UploadCloud size={16} /> Upload
           </NavLink>
         )}
         <button onClick={handleLogout} className="btn btn-secondary" style={{ padding: '0.5rem 1rem' }}>

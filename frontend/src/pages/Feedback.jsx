@@ -19,7 +19,7 @@ const getFileIcon = (name) => {
 
 export default function Feedback() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', comments: '' });
+  const [form, setForm] = useState({ name: '', email: '', comments: '' });
   const [file, setFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   
@@ -36,7 +36,9 @@ export default function Feedback() {
       try {
         const response = await axios.get(`${API_URL}/auth/users/me`);
         if (response.data.email) {
-          setForm((prev) => ({ ...prev, email: response.data.email }));
+          const user = response.data;
+          const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + ' ' : ''}${user.last_name}`;
+          setForm((prev) => ({ ...prev, email: user.email, name: fullName }));
         }
       } catch (e) {
         console.warn('Failed to securely infer identity mapping', e);
@@ -79,8 +81,8 @@ export default function Feedback() {
     setInvalidFields([]);
 
     const missing = [];
-    if (!form.firstName) missing.push('firstName');
-    if (!form.lastName) missing.push('lastName');
+    if (!form.name) missing.push('name');
+    if (!form.email) missing.push('email');
     // Removed require rule for comments here since it's optional
 
     if (missing.length > 0) {
@@ -97,7 +99,7 @@ export default function Feedback() {
 
     setLoading(true);
     const formData = new FormData();
-    const fullName = `${form.firstName} ${form.lastName}`.trim();
+    const fullName = form.name || 'Anonymous User';
     formData.append('name', fullName);
     formData.append('subject', `Attachment Submission from ${fullName.substring(0, 50)}`);
     formData.append('email', form.email);
@@ -115,7 +117,7 @@ export default function Feedback() {
         },
       });
       setSuccessMSG('Your secure file and message have been successfully uploaded.');
-      setForm({ firstName: '', lastName: '', email: form.email, comments: '' });
+      setForm({ name: form.name, email: form.email, comments: '' });
       setFile(null);
       setUploadProgress(0);
       setInvalidFields([]);
@@ -126,7 +128,6 @@ export default function Feedback() {
         const messages = detail.map(d => `${d.field}: ${d.msg}`).join(' | ');
         const errorFields = detail.map(d => {
             // map backend fields to frontend local state names
-            if (d.field === 'name') return 'firstName'; // we map name wrapper back to first for highlight
             if (d.field === 'message') return 'comments';
             return d.field;
         });
@@ -183,27 +184,16 @@ export default function Feedback() {
         {/* Left Column: Metadata */}
         <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">First Name *</label>
-              <input 
-                className="form-input" 
-                style={inputStyle('firstName')}
-                value={form.firstName} 
-                onChange={(e) => setForm({ ...form, firstName: e.target.value })} 
-                placeholder="First"
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Last Name *</label>
-              <input 
-                className="form-input" 
-                style={inputStyle('lastName')}
-                value={form.lastName} 
-                onChange={(e) => setForm({ ...form, lastName: e.target.value })} 
-                placeholder="Last"
-              />
-            </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">System Account Name</label>
+            <input 
+              type="text"
+              className="form-input" 
+              style={{ ...inputStyle('name'), opacity: 0.7, cursor: 'not-allowed', background: 'var(--bg-primary)' }}
+              value={form.name} 
+              readOnly
+              disabled
+            />
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>

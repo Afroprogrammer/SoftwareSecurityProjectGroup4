@@ -16,6 +16,9 @@ const Dashboard = () => {
   
   // Create User State (Admin Only)
   const [createUserStatus, setCreateUserStatus] = useState({ type: '', msg: '' });
+  const [newFirstName, setNewFirstName] = useState('');
+  const [newMiddleName, setNewMiddleName] = useState('');
+  const [newLastName, setNewLastName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
@@ -92,9 +95,19 @@ const Dashboard = () => {
 
     try {
       await axios.post(`${import.meta.env.VITE_API_URL}/auth/users`, 
-        { email: newEmail, password: newUserPassword, role: "user" }
+        { 
+          first_name: newFirstName,
+          middle_name: newMiddleName,
+          last_name: newLastName,
+          email: newEmail, 
+          password: newUserPassword, 
+          role: "user" 
+        }
       );
       setCreateUserStatus({ type: 'success', msg: `User ${newEmail} successfully provisioned.` });
+      setNewFirstName('');
+      setNewMiddleName('');
+      setNewLastName('');
       setNewEmail('');
       setNewUserPassword('');
     } catch (err) {
@@ -123,7 +136,10 @@ const Dashboard = () => {
         
         <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Authenticated Entity</div>
-          <div style={{ fontWeight: '500', fontSize: '1.1rem' }}>{user.email}</div>
+          <div style={{ fontWeight: '500', fontSize: '1.2rem', marginBottom: '2px' }}>
+            {user.first_name} {user.middle_name ? `${user.middle_name} ` : ''}{user.last_name}
+          </div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{user.email}</div>
         </div>
         
         <div style={{ background: 'var(--bg-tertiary)', padding: '1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -205,7 +221,7 @@ const Dashboard = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
             <Users size={32} color="var(--warning)" />
             <div>
-              <h2 style={{ marginBottom: 0 }}>Administrative Provisioning</h2>
+              <h2 style={{ marginBottom: 0 }}>Create User</h2>
               <p style={{ margin: 0 }}>Role-Based Access Control strict boundary for User additions.</p>
             </div>
           </div>
@@ -217,43 +233,62 @@ const Dashboard = () => {
             </div>
           )}
 
-          <form onSubmit={handleCreateUser} autoComplete="off" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'start' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Email Context</label>
-              <input 
-                type="email" 
-                className="form-input" 
-                required
-                autoComplete="off"
-                value={newEmail}
-                onChange={e => setNewEmail(e.target.value)}
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Initial Credential</label>
-              <div style={{ position: 'relative', marginBottom: '4px' }}>
-                <input 
-                  type={showNewUserPassword ? "text" : "password"} 
-                  className="form-input" 
-                  style={{ width: '100%', paddingRight: '2.5rem' }}
-                  required
-                  autoComplete="new-password"
-                  minLength={12}
-                  value={newUserPassword}
-                  onChange={e => setNewUserPassword(e.target.value)}
-                />
-                <div 
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', display: 'flex' }}
-                  onClick={() => setShowNewUserPassword(!showNewUserPassword)}
-                >
-                  {showNewUserPassword ? <EyeOff size={18} color="var(--text-secondary)" /> : <Eye size={18} color="var(--text-secondary)" />}
-                </div>
+          <form onSubmit={handleCreateUser} autoComplete="off" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', alignItems: 'start' }}>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">First Name</label>
+                <input type="text" className="form-input" required value={newFirstName} onChange={e => setNewFirstName(e.target.value)} />
               </div>
-              <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
-                Policy: Min 12 chars. Must contain uppercase, lowercase, number, and special character.
-              </small>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Middle Name</label>
+                <input type="text" className="form-input" value={newMiddleName} onChange={e => setNewMiddleName(e.target.value)} />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Last Name</label>
+                <input type="text" className="form-input" required value={newLastName} onChange={e => setNewLastName(e.target.value)} />
+              </div>
             </div>
-            <button type="submit" className="btn" style={{ height: '44px', marginTop: '28px' }}>Provision Record</button>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Email</label>
+                <input 
+                  type="email" 
+                  className="form-input" 
+                  required
+                  autoComplete="off"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                />
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Password</label>
+                <div style={{ position: 'relative', marginBottom: '4px' }}>
+                  <input 
+                    type={showNewUserPassword ? "text" : "password"} 
+                    className="form-input" 
+                    style={{ width: '100%', paddingRight: '2.5rem' }}
+                    required
+                    autoComplete="new-password"
+                    minLength={12}
+                    value={newUserPassword}
+                    onChange={e => setNewUserPassword(e.target.value)}
+                  />
+                  <div 
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', display: 'flex' }}
+                    onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                  >
+                    {showNewUserPassword ? <EyeOff size={18} color="var(--text-secondary)" /> : <Eye size={18} color="var(--text-secondary)" />}
+                  </div>
+                </div>
+                <small style={{ color: 'var(--text-secondary)', display: 'block', marginTop: '4px' }}>
+                  Policy: Min 12 chars. Must contain uppercase, lowercase, number, and special character.
+                </small>
+              </div>
+            </div>
+            
+            <button type="submit" className="btn" style={{ padding: '0.8rem' }}>Provision Record</button>
           </form>
 
           {/* User Audit Table */}
@@ -264,7 +299,7 @@ const Dashboard = () => {
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
                     <th style={{ padding: '0.75rem' }}>ID</th>
-                    <th style={{ padding: '0.75rem' }}>Email</th>
+                    <th style={{ padding: '0.75rem' }}>System Identity</th>
                     <th style={{ padding: '0.75rem' }}>Role</th>
                     <th style={{ padding: '0.75rem' }}>Status</th>
                     <th style={{ padding: '0.75rem' }}>Lifecycle Actions</th>
@@ -274,7 +309,10 @@ const Dashboard = () => {
                   {auditUsers.map(u => (
                     <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '0.75rem' }}>{u.id}</td>
-                      <td style={{ padding: '0.75rem', fontWeight: 500 }}>{u.email}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <div style={{ fontWeight: 600 }}>{u.first_name} {u.middle_name ? `${u.middle_name} ` : ''}{u.last_name}</div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{u.email}</div>
+                      </td>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '4px', background: u.role === 'admin' ? 'rgba(234, 179, 8, 0.1)' : 'var(--bg-primary)', color: u.role === 'admin' ? 'var(--warning)' : 'var(--text-primary)' }}>
                           {u.role}

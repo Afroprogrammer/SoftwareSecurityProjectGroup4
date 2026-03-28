@@ -4,6 +4,9 @@ from datetime import datetime
 import re
 
 class UserCreate(BaseModel):
+    first_name: str = Field(..., max_length=100)
+    middle_name: Optional[str] = Field(None, max_length=100)
+    last_name: str = Field(..., max_length=100)
     email: EmailStr = Field(..., max_length=255, description="Truncate buffer boundary protecting from memory exhaustion")
     password: str = Field(..., min_length=12, max_length=128, description="Must be at least 12 characters and contain uppercase, lowercase, number, and special character.") # Strong password enforcement
     role: Optional[str] = "user"
@@ -40,6 +43,9 @@ class UserChangePassword(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
     email: str
     role: str
     is_active: bool

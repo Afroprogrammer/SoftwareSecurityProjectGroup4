@@ -103,6 +103,9 @@ async def startup_event():
             if not user:
                 hashed_pw = get_password_hash(admin_pw)
                 admin = User(
+                    first_name="System",
+                    middle_name="Secured",
+                    last_name="Administrator",
                     email=admin_email,
                     hashed_password=hashed_pw,
                     role="admin"
