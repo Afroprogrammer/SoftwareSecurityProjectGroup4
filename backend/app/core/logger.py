@@ -24,17 +24,18 @@ async def log_audit_ledger(db: AsyncSession, action: str, ip: str, details: str 
     new_log_data = f"{previous_hash}|{action}|{ip}|{user_id}|{safe_details}"
     new_hash = hashlib.sha256(new_log_data.encode('utf-8')).hexdigest()
     
-    # 4. Insert Block directly over SQLAlchemy mapping
-    audit_entry = AuditLog(
-        user_id=user_id, 
-        action=action, 
-        ip_address=ip, 
-        details=safe_details,
-        previous_hash=previous_hash,
-        hash=new_hash
-    )
+    # 4. Insert Block directly via the Stored Procedure Call (Abstacting native table rights)
+    from sqlalchemy import text
+    query = text("SELECT sp_insert_audit_log(:uid, :act, :ip, :det, :phash, :nhash)")
+    await db.execute(query, {
+        "uid": user_id,
+        "act": action,
+        "ip": ip,
+        "det": safe_details,
+        "phash": previous_hash,
+        "nhash": new_hash
+    })
     
-    db.add(audit_entry)
     await db.commit()
     
     # Emulate the write onto backend terminals explicitly

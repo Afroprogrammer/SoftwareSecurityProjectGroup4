@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.database import get_db
+from app.database import get_db, get_readonly_db
 from app.models.user import User, AuditLog
 from app.schemas.user import Token, UserCreate, UserResponse, UserChangePassword
 from app.security.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -167,8 +167,8 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 @router.get("/logs")
 async def get_immutable_ledger_logs(
     current_admin: User = Depends(get_current_admin_user), 
-    db: AsyncSession = Depends(get_db)):
-    """Admin-only endpoint to analyze the Cryptographic Log Ledger"""
+    db: AsyncSession = Depends(get_readonly_db)):
+    """Admin-only endpoint to analyze the Cryptographic Log Ledger. Natively uses Trust Separation via Read-Only access!"""
     # Fetch top 100 logs descending
     result = await db.execute(select(AuditLog).order_by(AuditLog.id.desc()).limit(100))
     logs = result.scalars().all()
@@ -188,9 +188,9 @@ async def get_immutable_ledger_logs(
 @router.get("/users", response_model=List[UserResponse])
 async def list_all_users(
     current_admin: User = Depends(get_current_admin_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_readonly_db)
 ):
-    """Admin-only endpoint to audit all system accounts."""
+    """Admin-only endpoint to audit all system accounts via strict Read-Only credentials."""
     result = await db.execute(select(User).order_by(User.id))
     return result.scalars().all()
 

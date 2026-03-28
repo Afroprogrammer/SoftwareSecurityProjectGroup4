@@ -26,6 +26,7 @@ services:
     container_name: secure_fastapi_backend
     environment:
       - DATABASE_URL=postgresql+asyncpg://app_user:RestrictedAppPass123!@db:5432/secure_app
+      - READONLY_DATABASE_URL=postgresql+asyncpg://read_only_user:ReadOnlyPass123!@db:5432/secure_app
       - SECRET_KEY=b9c6f22e838eaaebd0a149cbedb6a4b13bd1cedec3f95e5b61b24137df7edec7
       - ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
