@@ -13,7 +13,6 @@ click==8.3.1
 cryptography==46.0.5
 dnspython==2.8.0
 dparse==0.6.4
-ecdsa==0.19.1
 email-validator==2.3.0
 fastapi==0.135.1
 filelock==3.25.2
@@ -34,7 +33,6 @@ nltk==3.9.3
 packaging==26.0
 passlib==1.7.4
 pluggy==1.6.0
-pyasn1==0.6.3
 pycparser==3.0
 pydantic==2.12.5
 pydantic-settings==2.13.1
@@ -42,14 +40,12 @@ pydantic_core==2.41.5
 Pygments==2.19.2
 pytest==9.0.2
 python-dotenv==1.2.2
-python-jose==3.5.0
 python-magic==0.4.27
 python-multipart==0.0.22
 PyYAML==6.0.3
 regex==2026.2.28
 requests==2.32.5
 rich==14.3.3
-rsa==4.9.1
 ruamel.yaml==0.19.1
 safety==3.7.0
 safety-schemas==0.0.16
@@ -66,3 +62,4 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.3
 uvicorn==0.42.0
+PyJWT==2.10.1

@@ -41,5 +41,4 @@ jobs:
     - name: Run Safety Dependency Scanner
       run: |
         # Evaluates requirements.txt against a live database of known malicious packages.
-        # Ignores ecdsa 0.19.1 side-channel flaws (64459, 64396) as we only use HS256 symmetric JWTs.
-        safety scan -i 64459 -i 64396 -r backend/requirements.txt
+        safety scan -r backend/requirements.txt

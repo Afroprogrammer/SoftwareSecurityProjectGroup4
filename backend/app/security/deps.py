@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from pydantic import ValidationError
@@ -25,7 +25,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         if email is None:
             raise credentials_exception
         token_data = TokenData(email=email, role=role)
-    except (JWTError, ValidationError):
+    except (jwt.InvalidTokenError, ValidationError):
         raise credentials_exception
         
     result = await db.execute(select(User).where(User.email == token_data.email))
