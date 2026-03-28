@@ -39,8 +39,8 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
 
     # Auto-seed the administrative user upon server startup
-    admin_email = os.getenv("DEFAULT_ADMIN_EMAIL")
-    admin_pw = os.getenv("DEFAULT_ADMIN_PASSWORD")
+    admin_email = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@securenet.local")
+    admin_pw = os.getenv("DEFAULT_ADMIN_PASSWORD", "SuperSecurePassword123!")
     
     if admin_email and admin_pw:
         async with AsyncSessionLocal() as session:

@@ -41,6 +41,9 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* Root Redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
         {/* Strict 404 Catch-All Route */}
         <Route path="*" element={<Navigate to="/404" replace />} />
         <Route path="/404" element={<NotFound />} />
