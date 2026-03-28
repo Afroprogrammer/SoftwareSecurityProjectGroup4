@@ -11,6 +11,7 @@ from app.security.deps import get_current_active_user
 from app.security.encryption import encrypt_field
 from app.models.user import User, AuditLog
 from app.routers.auth import log_audit
+from app.security.rate_limit import limiter
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
 
@@ -29,6 +30,7 @@ MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
 
 
 @router.post("/submit", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 async def submit_feedback(
     request: Request,
     name: str = Form(...),

@@ -2,6 +2,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 from datetime import timedelta, datetime
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from app.models.user import User, AuditLog
 from app.schemas.user import Token, UserCreate, UserResponse, UserChangePassword
 from app.security.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.security.deps import get_current_active_user, get_current_admin_user
+from app.security.rate_limit import limiter
 
 # Configure Server & File Logging
 audit_logger = logging.getLogger("audit_logger")
@@ -42,6 +44,7 @@ async def log_audit(db: AsyncSession, action: str, ip: str, details: str = None,
     await db.commit()
 
 @router.post("/login")
+@limiter.limit("5/minute")
 async def login(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalars().first()
@@ -134,6 +137,7 @@ async def logout(response: Response, request: Request, current_user: User = Depe
 
 
 @router.post("/change-password", response_model=dict)
+@limiter.limit("5/minute")
 async def change_password(
     request: Request,
     password_data: UserChangePassword, 
@@ -152,6 +156,7 @@ async def change_password(
     return {"message": "Password changed successfully"}
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 async def create_user(
     request: Request,
     user_in: UserCreate, 
@@ -183,3 +188,42 @@ async def create_user(
 @router.get("/users/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+@router.get("/users", response_model=List[UserResponse])
+async def list_all_users(
+    current_admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Admin-only endpoint to audit all system accounts."""
+    result = await db.execute(select(User).order_by(User.id))
+    return result.scalars().all()
+
+@router.put("/users/{target_id}/toggle-status")
+async def toggle_user_status(
+    request: Request,
+    target_id: int,
+    current_admin: User = Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Admin-only endpoint to disable or enable accounts."""
+    if current_admin.id == target_id:
+        raise HTTPException(status_code=400, detail="Cannot toggle your own admin account status.")
+        
+    result = await db.execute(select(User).where(User.id == target_id))
+    target_user = result.scalars().first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    target_user.is_active = not target_user.is_active
+    # If disabling, forcefully terminate their session by stripping JTI
+    if not target_user.is_active:
+        target_user.active_session_jti = None
+        
+    db.add(target_user)
+    await db.commit()
+    
+    client_ip = request.client.host if request.client else "unknown"
+    action = "USER_ENABLED" if target_user.is_active else "USER_DISABLED"
+    await log_audit(db, action, client_ip, f"Admin toggled {target_user.email} active status to {target_user.is_active}", user_id=current_admin.id)
+    
+    return {"message": f"User {target_user.email} status updated to {target_user.is_active}"}

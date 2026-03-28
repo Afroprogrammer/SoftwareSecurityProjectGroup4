@@ -20,17 +20,39 @@ const Dashboard = () => {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
+  // User Auditing State (Admin Only)
+  const [auditUsers, setAuditUsers] = useState([]);
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me`);
         setUser(response.data);
+        if (response.data.role === 'admin') {
+          fetchAuditUsers();
+        }
       } catch (error) {
         console.error('Failed to fetch user securely:', error);
       }
     };
     fetchUser();
   }, []);
+
+  const fetchAuditUsers = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users`);
+      setAuditUsers(response.data);
+    } catch (e) { console.error('Failed to fetch user audit list', e); }
+  };
+
+  const handleToggleStatus = async (targetId) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_API_URL}/auth/users/${targetId}/toggle-status`);
+      fetchAuditUsers(); // Refresh the list
+    } catch (e) {
+      alert("Failed to toggle status: " + (e.response?.data?.detail || e.message));
+    }
+  };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -225,6 +247,61 @@ const Dashboard = () => {
             </div>
             <button type="submit" className="btn" style={{ height: '44px', marginTop: '28px' }}>Provision Record</button>
           </form>
+
+          {/* User Audit Table */}
+          <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Account Lifecycle Audit</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '0.75rem' }}>ID</th>
+                    <th style={{ padding: '0.75rem' }}>Email</th>
+                    <th style={{ padding: '0.75rem' }}>Role</th>
+                    <th style={{ padding: '0.75rem' }}>Status</th>
+                    <th style={{ padding: '0.75rem' }}>Lifecycle Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditUsers.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                      <td style={{ padding: '0.75rem' }}>{u.id}</td>
+                      <td style={{ padding: '0.75rem', fontWeight: 500 }}>{u.email}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: '4px', background: u.role === 'admin' ? 'rgba(234, 179, 8, 0.1)' : 'var(--bg-primary)', color: u.role === 'admin' ? 'var(--warning)' : 'var(--text-primary)' }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        {u.is_active ? 
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--success)' }}><CheckCircle size={14} /> Active</span> :
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--error)' }}><AlertCircle size={14} /> Suspended</span>
+                        }
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <button 
+                          onClick={() => handleToggleStatus(u.id)}
+                          disabled={u.id === user.id}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border-color)',
+                            background: u.id === user.id ? 'var(--bg-primary)' : (u.is_active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)'),
+                            color: u.id === user.id ? 'var(--text-secondary)' : (u.is_active ? 'var(--error)' : 'var(--success)'),
+                            cursor: u.id === user.id ? 'not-allowed' : 'pointer',
+                            fontSize: '0.8rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          {u.id === user.id ? 'Protected' : (u.is_active ? 'Disable' : 'Enable')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>
