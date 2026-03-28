@@ -1,5 +1,5 @@
 import os
-import uuid
+import secrets
 import filetype
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,7 +103,7 @@ async def submit_feedback(
             "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
         }
         safe_ext = ext_map.get(mime_type, ".bin")
-        safe_filename = uuid.uuid4().hex + safe_ext
+        safe_filename = secrets.token_hex(32) + safe_ext
 
         # Save to private uploads directory (outside web root)
         upload_dir = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
