@@ -2,6 +2,9 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
+# Ensure Python doesn't aggressively buffer stdout so we can see startup prints instantly
+ENV PYTHONUNBUFFERED=1
+
 # Install system dependencies for cryptography and asyncpg
 RUN apt-get update && apt-get install -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
