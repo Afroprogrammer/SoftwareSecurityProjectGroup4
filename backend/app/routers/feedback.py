@@ -10,7 +10,7 @@ from app.schemas.feedback import FeedbackCreate, FeedbackResponse
 from app.security.deps import get_current_active_user
 from app.security.encryption import encrypt_field
 from app.models.user import User, AuditLog
-from app.routers.auth import log_audit
+from app.core.logger import log_audit_ledger
 from app.security.rate_limit import limiter
 
 router = APIRouter(prefix="/feedback", tags=["Feedback"])
@@ -135,7 +135,6 @@ async def submit_feedback(
 
     # --- Audit log ---
     client_ip = request.client.host if request.client else "unknown"
-    await log_audit(db, action="FEEDBACK_SUBMIT", ip=client_ip, user_id=current_user.id,
-                    details=f"Subject: {validated.subject} | File: {original_filename or 'None'}")
+    await log_audit_ledger(db, "FEEDBACK_SUBMITTED", client_ip, f"Feedback submitted by {current_user.email}. Encrypted comment.", user_id=current_user.id)
 
     return feedback_entry

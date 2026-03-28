@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -6,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base, AsyncSessionLocal
 from app.routers import auth, feedback
 from app.security.rate_limit import limiter
+from app.core.logger import log_audit_ledger
 import os
 from sqlalchemy.future import select
 from app.security.auth import get_password_hash
@@ -32,6 +35,31 @@ app.add_middleware(
 # Attach Universal Rate Limiter
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Trap all 500s. Prevent stack trace leakage and log securely!"""
+    ip = request.client.host if request.client else "unknown"
+    async with AsyncSessionLocal() as db:
+        await log_audit_ledger(db, "SYSTEM_EXCEPTION", ip, str(exc))
+    return JSONResponse(status_code=500, content={"message": "An internal system error occurred. Stack isolated."})
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Trap Access Control failures (401/403) and ledger them!"""
+    ip = request.client.host if request.client else "unknown"
+    if exc.status_code in [401, 403]:
+        async with AsyncSessionLocal() as db:
+            await log_audit_ledger(db, "ACCESS_VIOLATION", ip, str(exc.detail))
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Trap Input Schema tampering dynamically"""
+    ip = request.client.host if request.client else "unknown"
+    async with AsyncSessionLocal() as db:
+        await log_audit_ledger(db, "VALIDATION_FAILURE", ip, str(exc.errors()))
+    return JSONResponse(status_code=422, content={"detail": "Input validation payload rejected securely."})
 
 app.include_router(auth.router)
 app.include_router(feedback.router)

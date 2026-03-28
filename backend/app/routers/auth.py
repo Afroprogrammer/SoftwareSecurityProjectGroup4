@@ -14,34 +14,9 @@ from app.schemas.user import Token, UserCreate, UserResponse, UserChangePassword
 from app.security.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.security.deps import get_current_active_user, get_current_admin_user
 from app.security.rate_limit import limiter
-
-# Configure Server & File Logging
-audit_logger = logging.getLogger("audit_logger")
-audit_logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-if not audit_logger.handlers:
-    audit_logger.addHandler(stream_handler)
-
-try:
-    log_dir = os.path.join(os.path.dirname(__file__), "..", "..", "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    file_handler = RotatingFileHandler(os.path.join(log_dir, "audit.log"), maxBytes=10*1024*1024, backupCount=5)
-    file_handler.setFormatter(formatter)
-    audit_logger.addHandler(file_handler)
-except Exception as e:
-    audit_logger.warning(f"Failed to initialize file logger: {e}")
+from app.core.logger import log_audit_ledger
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-async def log_audit(db: AsyncSession, action: str, ip: str, details: str = None, user_id: int = None):
-    # Log to flat file & terminal
-    audit_logger.info(f"ACTION: {action} | IP: {ip} | USER_ID: {user_id} | DETAILS: {details}")
-    # Log to SQL Database
-    audit_entry = AuditLog(user_id=user_id, action=action, ip_address=ip, details=details)
-    db.add(audit_entry)
-    await db.commit()
 
 @router.post("/login")
 @limiter.limit("5/minute")
@@ -52,21 +27,21 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
     client_ip = request.client.host if request.client else "unknown"
 
     if not user:
-        await log_audit(db, "LOGIN_FAILURE", client_ip, f"Failed attempt for email: {form_data.username}")
+        await log_audit_ledger(db, "LOGIN_FAILURE", client_ip, f"Failed attempt for email: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
 
     if not user.is_active:
-        await log_audit(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
+        await log_audit_ledger(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
         raise HTTPException(status_code=400, detail="Inactive user")
 
     # Lockout check
     if user.locked_until:
         if datetime.utcnow() < user.locked_until:
             remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
-            await log_audit(db, "LOGIN_LOCKED_DENIED", client_ip, f"Locked account attempt: {user.email}", user_id=user.id)
+            await log_audit_ledger(db, "LOGIN_LOCKED_DENIED", client_ip, f"Locked account attempt: {user.email}", user_id=user.id)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Account locked. Try again in {remaining} seconds."
@@ -90,7 +65,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
         db.add(user)
         await db.commit()
 
-        await log_audit(db, "LOGIN_FAILURE", client_ip, audit_msg, user_id=user.id)
+        await log_audit_ledger(db, "LOGIN_FAILURE", client_ip, audit_msg, user_id=user.id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -118,7 +93,7 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
 
-    await log_audit(db, "LOGIN_SUCCESS", client_ip, "Successful login", user_id=user.id)
+    await log_audit_ledger(db, "LOGIN_SUCCESS", client_ip, "Successful login", user_id=user.id)
     return {"message": "Login successful"}
 
 @router.post("/logout")
@@ -132,7 +107,7 @@ async def logout(response: Response, request: Request, current_user: User = Depe
     response.delete_cookie("access_token")
     
     client_ip = request.client.host if request.client else "unknown"
-    await log_audit(db, "LOGOUT", client_ip, f"User {current_user.email} successfully logged out.", user_id=current_user.id)
+    await log_audit_ledger(db, "LOGOUT", client_ip, f"User {current_user.email} successfully logged out.", user_id=current_user.id)
     return {"message": "Logged out securely"}
 
 
@@ -151,7 +126,7 @@ async def change_password(
     db.add(current_user)
     
     client_ip = request.client.host if request.client else "unknown"
-    await log_audit(db, "PASSWORD_CHANGED", client_ip, "User successfully changed password", user_id=current_user.id)
+    await log_audit_ledger(db, "PASSWORD_CHANGED", client_ip, "User successfully changed password", user_id=current_user.id)
     await db.commit()
     return {"message": "Password changed successfully"}
 
@@ -181,13 +156,34 @@ async def create_user(
     await db.refresh(new_user)
     
     client_ip = request.client.host if request.client else "unknown"
-    await log_audit(db, "USER_CREATED", client_ip, f"Created new user {new_user.email} with role {new_user.role}", user_id=current_admin.id)
+    await log_audit_ledger(db, "USER_CREATED", client_ip, f"Created new user {new_user.email} with role {new_user.role}", user_id=current_admin.id)
     
     return new_user
 
 @router.get("/users/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+@router.get("/logs")
+async def get_immutable_ledger_logs(
+    current_admin: User = Depends(get_current_admin_user), 
+    db: AsyncSession = Depends(get_db)):
+    """Admin-only endpoint to analyze the Cryptographic Log Ledger"""
+    # Fetch top 100 logs descending
+    result = await db.execute(select(AuditLog).order_by(AuditLog.id.desc()).limit(100))
+    logs = result.scalars().all()
+    
+    # We serialize this out as raw dictionaries
+    return [{
+        "id": log.id,
+        "user_id": log.user_id,
+        "action": log.action,
+        "ip_address": log.ip_address,
+        "details": log.details,
+        "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+        "previous_hash": log.previous_hash,
+        "hash": log.hash
+    } for log in logs]
 
 @router.get("/users", response_model=List[UserResponse])
 async def list_all_users(
@@ -224,6 +220,6 @@ async def toggle_user_status(
     
     client_ip = request.client.host if request.client else "unknown"
     action = "USER_ENABLED" if target_user.is_active else "USER_DISABLED"
-    await log_audit(db, action, client_ip, f"Admin toggled {target_user.email} active status to {target_user.is_active}", user_id=current_admin.id)
+    await log_audit_ledger(db, action, client_ip, f"Admin toggled {target_user.email} active status to {target_user.is_active}", user_id=current_admin.id)
     
     return {"message": f"User {target_user.email} status updated to {target_user.is_active}"}

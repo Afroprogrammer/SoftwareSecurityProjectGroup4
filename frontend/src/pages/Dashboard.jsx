@@ -22,6 +22,7 @@ const Dashboard = () => {
 
   // User Auditing State (Admin Only)
   const [auditUsers, setAuditUsers] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -42,7 +43,10 @@ const Dashboard = () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users`);
       setAuditUsers(response.data);
-    } catch (e) { console.error('Failed to fetch user audit list', e); }
+      
+      const logsResp = await axios.get(`${import.meta.env.VITE_API_URL}/auth/logs`);
+      setAuditLogs(logsResp.data);
+    } catch (e) { console.error('Failed to fetch user audit data', e); }
   };
 
   const handleToggleStatus = async (targetId) => {
@@ -298,6 +302,64 @@ const Dashboard = () => {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Blockchain Logging Ledger Table */}
+          <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={20} color="var(--success)" />
+              Cryptographic Immutable Ledger
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+              SHA-256 algorithmically chained hashes. If a log's previous hash mathematically mismatches its cryptographic parent, it flags RED signifying a DB Row Tamper injection!
+            </p>
+            <div style={{ overflowX: 'auto', background: '#0a0a0a', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                <thead style={{ background: '#171717' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                    <th style={{ padding: '0.75rem' }}>ID</th>
+                    <th style={{ padding: '0.75rem' }}>Action Event</th>
+                    <th style={{ padding: '0.75rem' }}>User ID</th>
+                    <th style={{ padding: '0.75rem' }}>IP Address</th>
+                    <th style={{ padding: '0.75rem' }}>Details (JSON Secure)</th>
+                    <th style={{ padding: '0.75rem' }}>SHA-256 Signature Validity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.map((log, index) => {
+                    // Cryptographic validation logic: current block's previous_hash must match the older block's hash
+                    const olderBlock = auditLogs[index + 1];
+                    let isTampered = false;
+                    if (olderBlock && log.previous_hash !== olderBlock.hash) {
+                      isTampered = true; // HACKER ALERT!
+                    }
+
+                    return (
+                      <tr key={log.id} style={{ borderBottom: '1px solid var(--border-color)', background: isTampered ? 'rgba(239, 68, 68, 0.2)' : 'transparent' }}>
+                        <td style={{ padding: '0.75rem', color: isTampered ? 'var(--error)' : 'var(--text-secondary)' }}>{log.id}</td>
+                        <td style={{ padding: '0.75rem', color: isTampered ? 'var(--error)' : 'var(--accent-primary)', fontWeight: 600 }}>{log.action}</td>
+                        <td style={{ padding: '0.75rem', color: isTampered ? 'var(--error)' : 'var(--text-primary)' }}>{log.user_id || 'SYS'}</td>
+                        <td style={{ padding: '0.75rem', color: isTampered ? 'var(--error)' : 'var(--text-secondary)' }}>{log.ip_address}</td>
+                        <td style={{ padding: '0.75rem', color: isTampered ? 'var(--error)' : 'var(--text-primary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.details}>
+                          {log.details || 'Null'}
+                        </td>
+                        <td style={{ padding: '0.75rem' }}>
+                          {isTampered ? (
+                            <span style={{ color: 'var(--error)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <AlertCircle size={14} /> TAMPER DETECTED!
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle size={14} /> Verified Valid ({log.hash.substring(0, 8)}...)
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

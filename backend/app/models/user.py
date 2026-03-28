@@ -26,3 +26,5 @@ class AuditLog(Base):
     ip_address = Column(String, nullable=True)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     details = Column(String, nullable=True)
+    previous_hash = Column(String, nullable=True) # Genesis block natively receives None
+    hash = Column(String, nullable=False, default="unhashed") # Cryptographic Verification Record
