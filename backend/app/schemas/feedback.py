@@ -1,13 +1,12 @@
 import re
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, field_validator
-
+from pydantic import BaseModel, EmailStr, field_validator, Field
 
 class FeedbackCreate(BaseModel):
-    name: str
-    subject: str
-    email: EmailStr
-    message: str
+    name: str = Field(..., max_length=150, description="Truncating logical allocation buffer to 150 bytes")
+    subject: str = Field(..., max_length=150, description="Truncating logical allocation buffer to 150 bytes")
+    email: EmailStr = Field(..., max_length=255)
+    message: str = Field(..., max_length=1000, description="Truncating physical payload stream string mathematically")
 
     @field_validator("name", "subject")
     @classmethod

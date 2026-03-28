@@ -4,8 +4,8 @@ from datetime import datetime
 import re
 
 class UserCreate(BaseModel):
-    email: str
-    password: str = Field(..., min_length=12, description="Must be at least 12 characters and contain uppercase, lowercase, number, and special character.") # Strong password enforcement
+    email: EmailStr = Field(..., max_length=255, description="Truncate buffer boundary protecting from memory exhaustion")
+    password: str = Field(..., min_length=12, max_length=128, description="Must be at least 12 characters and contain uppercase, lowercase, number, and special character.") # Strong password enforcement
     role: Optional[str] = "user"
 
     @field_validator('password')
@@ -22,8 +22,8 @@ class UserCreate(BaseModel):
         return v
 
 class UserChangePassword(BaseModel):
-    old_password: str
-    new_password: str = Field(..., min_length=12, description="Must be at least 12 characters and contain uppercase, lowercase, number, and special character.")
+    old_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., min_length=12, max_length=128, description="Must be at least 12 characters and contain uppercase, lowercase, number, and special character.")
 
     @field_validator('new_password')
     @classmethod
