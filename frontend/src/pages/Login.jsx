@@ -27,8 +27,8 @@ const Login = () => {
         }
       });
 
-      if (response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token);
+      if (response.data.message === "Login successful") {
+        localStorage.setItem('isAuthenticated', 'true');
         navigate('/dashboard');
       }
     } catch (err) {

@@ -1,8 +1,8 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from datetime import timedelta, datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from datetime import timedelta, datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -41,12 +41,19 @@ async def log_audit(db: AsyncSession, action: str, ip: str, details: str = None,
     db.add(audit_entry)
     await db.commit()
 
-@router.post("/login", response_model=Token)
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+@router.post("/login")
+async def login(response: Response, request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == form_data.username))
     user = result.scalars().first()
     
     client_ip = request.client.host if request.client else "unknown"
+
+    if not user:
+        await log_audit(db, "LOGIN_FAILURE", client_ip, f"Failed attempt for email: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+        )
 
     if not user.is_active:
         await log_audit(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
@@ -84,22 +91,46 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Successful Login! Reset bad attempt counters
-    user.failed_login_attempts = 0
-    user.locked_until = None
-    db.add(user)
-    await db.commit()
-
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token, jti = create_access_token(
         data={"email": user.email, "role": user.role}, expires_delta=access_token_expires
     )
     
+    # Successful Login: Reset bad attempt counters and Bind JTI Concurrent Session!
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.active_session_jti = jti
+    db.add(user)
+    await db.commit()
+    
+    # Write the HttpOnly Secure Cookie specifically attached to the Response object
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False, # Set to False for localhost HTTP development. Use True in production with TLS!
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+
     await log_audit(db, "LOGIN_SUCCESS", client_ip, "Successful login", user_id=user.id)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"message": "Login successful"}
+
+@router.post("/logout")
+async def logout(response: Response, request: Request, current_user: User = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+    # Explicit Server-Side Session revocation
+    current_user.active_session_jti = None
+    db.add(current_user)
+    await db.commit()
+    
+    # Clear the Cookie physically from the Browser Engine
+    response.delete_cookie("access_token")
+    
+    client_ip = request.client.host if request.client else "unknown"
+    await log_audit(db, "LOGOUT", client_ip, f"User {current_user.email} successfully logged out.", user_id=current_user.id)
+    return {"message": "Logged out securely"}
 
 
 @router.post("/change-password", response_model=dict)

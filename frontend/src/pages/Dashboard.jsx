@@ -23,10 +23,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me`);
         setUser(response.data);
       } catch (error) {
         console.error('Failed to fetch user securely:', error);
@@ -45,10 +42,8 @@ const Dashboard = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       await axios.post(`${import.meta.env.VITE_API_URL}/auth/change-password`, 
-        { old_password: oldPassword, new_password: newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { old_password: oldPassword, new_password: newPassword }
       );
       setPassStatus({ type: 'success', msg: 'Password securely changed.' });
       setOldPassword('');
@@ -70,10 +65,8 @@ const Dashboard = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       await axios.post(`${import.meta.env.VITE_API_URL}/auth/users`, 
-        { email: newEmail, password: newUserPassword, role: "user" },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { email: newEmail, password: newUserPassword, role: "user" }
       );
       setCreateUserStatus({ type: 'success', msg: `User ${newEmail} successfully provisioned.` });
       setNewEmail('');

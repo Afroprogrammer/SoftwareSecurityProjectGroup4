@@ -32,17 +32,17 @@ export default function Feedback() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const fetchIdentity = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.email) {
-            setForm((prev) => ({ ...prev, email: payload.email }));
+        const response = await axios.get(`${API_URL}/auth/users/me`);
+        if (response.data.email) {
+          setForm((prev) => ({ ...prev, email: response.data.email }));
         }
       } catch (e) {
-        console.warn('Invalid token payload', e);
+        console.warn('Failed to securely infer identity mapping', e);
       }
-    }
+    };
+    fetchIdentity();
   }, []);
 
   const validateFile = (f) => {
@@ -96,9 +96,7 @@ export default function Feedback() {
     }
 
     setLoading(true);
-    const token = localStorage.getItem('token');
     const formData = new FormData();
-    
     const fullName = `${form.firstName} ${form.lastName}`.trim();
     formData.append('name', fullName);
     formData.append('subject', `Attachment Submission from ${fullName.substring(0, 50)}`);
@@ -109,7 +107,6 @@ export default function Feedback() {
     try {
       await axios.post(`${API_URL}/feedback/submit`, formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
         onUploadProgress: (ev) => {

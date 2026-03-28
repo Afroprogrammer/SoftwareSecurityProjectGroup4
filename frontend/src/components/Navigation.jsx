@@ -1,26 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ShieldCheck, LogOut, MessageSquare } from 'lucide-react';
+import axios from 'axios';
 
 const Navigation = () => {
   const navigate = useNavigate();
   const [role, setRole] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const fetchRole = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setRole(payload.role || null);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/users/me`);
+        setRole(response.data.role || null);
       } catch (e) {
-        console.warn('Invalid token payload', e);
+        console.warn('Failed to securely fetch role context', e);
       }
-    }
+    };
+    fetchRole();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/logout`);
+    } catch(e) { console.error('Error logging out explicitly', e); }
+    localStorage.removeItem('isAuthenticated');
     navigate('/login');
   };
 

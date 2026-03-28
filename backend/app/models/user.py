@@ -13,6 +13,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime(timezone=True), nullable=True)
+    active_session_jti = Column(String, nullable=True) # Tracks the strictly authorized JTI
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     feedbacks = relationship("Feedback", back_populates="user")
 

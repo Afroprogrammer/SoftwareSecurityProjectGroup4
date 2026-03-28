@@ -10,19 +10,24 @@ from app.models.user import User
 from app.schemas.user import TokenData
 from app.security.auth import SECRET_KEY, ALGORITHM
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+from fastapi import Request
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated (Cookie missing)")
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("email")
         role: str = payload.get("role")
-        if email is None:
+        jti: str = payload.get("jti")
+        if email is None or jti is None:
             raise credentials_exception
         token_data = TokenData(email=email, role=role)
     except (jwt.InvalidTokenError, ValidationError):
@@ -30,8 +35,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         
     result = await db.execute(select(User).where(User.email == token_data.email))
     user = result.scalars().first()
+    
     if user is None:
         raise credentials_exception
+        
+    # Strictly enforce concurrent session termination!
+    if user.active_session_jti != jti:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session terminated (Logged in from another device)")
+        
     return user
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
