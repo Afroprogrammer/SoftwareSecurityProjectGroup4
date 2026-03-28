@@ -48,6 +48,11 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
+    
+    # Mathematical Application Server Masking
+    if "Server" in response.headers:
+        del response.headers["Server"]
+        
     return response
 
 @app.exception_handler(Exception)

@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /api/
+Disallow: /auth/
+Disallow: /admin/
+Disallow: /private/
+Disallow: /dashboard/
+
+# Mask API routing topography from web scraping crawlers
+User-agent: Googlebot
+Disallow: /api/
+Disallow: /backend/
