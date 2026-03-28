@@ -1,7 +1,7 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,18 +48,50 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     
     client_ip = request.client.host if request.client else "unknown"
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        # Log failed attempt (Graduate Enhancement)
-        await log_audit(db, "LOGIN_FAILURE", client_ip, f"Failed attempt for email: {form_data.username}")
+    if not user.is_active:
+        await log_audit(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    # Lockout check
+    if user.locked_until:
+        if datetime.utcnow() < user.locked_until:
+            remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
+            await log_audit(db, "LOGIN_LOCKED_DENIED", client_ip, f"Locked account attempt: {user.email}", user_id=user.id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Account locked. Try again in {remaining} seconds."
+            )
+        else:
+            # Lock has expired natively, reset failure counters
+            user.locked_until = None
+            user.failed_login_attempts = 0
+            db.add(user)
+            await db.commit()
+
+    if not verify_password(form_data.password, user.hashed_password):
+        # Log failed attempt and track brute-force lockouts
+        user.failed_login_attempts += 1
+        audit_msg = f"Failed attempt for email: {form_data.username}"
+        
+        if user.failed_login_attempts >= 5:
+            user.locked_until = datetime.utcnow() + timedelta(seconds=60)
+            audit_msg = f"Account locked after 5 failed attempts: {form_data.username}"
+        
+        db.add(user)
+        await db.commit()
+
+        await log_audit(db, "LOGIN_FAILURE", client_ip, audit_msg, user_id=user.id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not user.is_active:
-        await log_audit(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
-        raise HTTPException(status_code=400, detail="Inactive user")
+    # Successful Login! Reset bad attempt counters
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.add(user)
+    await db.commit()
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

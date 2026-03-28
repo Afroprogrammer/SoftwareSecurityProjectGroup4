@@ -11,6 +11,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="user", nullable=False) # 'admin' or 'user'
     is_active = Column(Boolean, default=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     feedbacks = relationship("Feedback", back_populates="user")
 
