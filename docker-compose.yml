@@ -13,6 +13,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres_init.sql:/docker-entrypoint-initdb.d/postgres_init.sql
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -40,6 +42,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/uploads:/app/uploads
+    security_opt:
+      - no-new-privileges:true
 
   frontend:
     build:
@@ -50,6 +54,8 @@ services:
       - "5173:8080"
     depends_on:
       - backend
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   postgres_data:
