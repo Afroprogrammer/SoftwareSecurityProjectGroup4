@@ -11,6 +11,7 @@ from app.security.rate_limit import limiter
 from app.core.logger import log_audit_ledger
 import os
 from sqlalchemy.future import select
+from sqlalchemy import text
 from app.security.auth import get_password_hash
 
 app = FastAPI(
@@ -91,6 +92,30 @@ async def startup_event():
     from app.models.feedback import Feedback
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Apply stored procedure and permissions after tables exist
+        await conn.execute(text("""
+            CREATE OR REPLACE FUNCTION sp_insert_audit_log(
+                p_user_id INTEGER,
+                p_action VARCHAR,
+                p_ip_address VARCHAR,
+                p_details VARCHAR,
+                p_previous_hash VARCHAR,
+                p_hash VARCHAR
+            )
+            RETURNS VOID AS $$
+            BEGIN
+                INSERT INTO audit_logs (user_id, action, ip_address, details, previous_hash, hash)
+                VALUES (p_user_id, p_action, p_ip_address, p_details, p_previous_hash, p_hash);
+            END;
+            $$ LANGUAGE plpgsql SECURITY DEFINER;
+        """))
+        
+        try:
+            await conn.execute(text("REVOKE INSERT ON audit_logs FROM app_user;"))
+            await conn.execute(text("GRANT EXECUTE ON FUNCTION sp_insert_audit_log TO app_user;"))
+        except Exception as e:
+            print(f"Warning: Could not set permissions. {e}")
 
     # Auto-seed the administrative user upon server startup
     admin_email = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@securenet.local")
