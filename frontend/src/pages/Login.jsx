@@ -60,6 +60,12 @@ const Login = () => {
         }
       }
       
+      // Specifically Trap the 429 IP Rate Limiter Network Drop
+      if (err.response?.status === 429) {
+        setError("Maximum request limit reached. Please wait a moment before trying again.");
+        return;
+      }
+      
       setError(errorMessage || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -70,7 +76,7 @@ const Login = () => {
     <div className="split-layout animate-fade-in">
       <div className="split-image-container">
         <div className="split-image-overlay">
-          <h1>Secure Feedback System</h1>
+          <h1>LoremIpsum</h1>
           <p>A trusted channel for university feedback</p>
         </div>
       </div>

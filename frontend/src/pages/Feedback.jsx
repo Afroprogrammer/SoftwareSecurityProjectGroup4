@@ -285,12 +285,13 @@ export default function Feedback() {
           <button
             type="submit"
             className="btn"
-            disabled={loading}
+            disabled={loading || !file}
             style={{ 
                 width: '100%', 
                 marginTop: '1.5rem',
                 padding: '1rem',
-                opacity: loading ? 0.7 : 1,
+                opacity: (loading || !file) ? 0.7 : 1,
+                cursor: (loading || !file) ? 'not-allowed' : 'pointer'
             }}
           >
             {loading ? 'Submitting & Encrypting...' : 'Submit Form'}
