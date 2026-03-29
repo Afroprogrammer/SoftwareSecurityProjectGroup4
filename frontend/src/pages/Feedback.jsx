@@ -34,7 +34,7 @@ export default function Feedback() {
   useEffect(() => {
     const fetchIdentity = async () => {
       try {
-        const response = await axios.get(`${API_URL}/auth/users/me`);
+        const response = await axios.get(`${API_URL}/auth/users/me`, { withCredentials: true });
         if (response.data.email) {
           const user = response.data;
           const fullName = `${user.first_name} ${user.middle_name ? user.middle_name + ' ' : ''}${user.last_name}`;
@@ -108,6 +108,7 @@ export default function Feedback() {
 
     try {
       await axios.post(`${API_URL}/feedback/submit`, formData, {
+        withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
