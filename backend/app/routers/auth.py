@@ -147,6 +147,9 @@ async def create_user(
         
     hashed_password = get_password_hash(user_in.password)
     new_user = User(
+        first_name=user_in.first_name,
+        middle_name=user_in.middle_name,
+        last_name=user_in.last_name,
         email=user_in.email,
         hashed_password=hashed_password,
         role="user" # Forcing role to always be 'user' to restrict admin escalation
