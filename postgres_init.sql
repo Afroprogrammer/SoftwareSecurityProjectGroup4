@@ -23,10 +23,10 @@ CREATE USER read_only_user WITH PASSWORD 'ReadOnlyPass123!';
 GRANT CONNECT ON DATABASE secure_app TO read_only_user;
 GRANT USAGE ON SCHEMA public TO read_only_user;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO read_only_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO read_only_user;
 
--- Ensure future tables auto-inherit DML constraints
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
+-- When the Python app_user creates new tables (like 'users' or 'feedback'), 
+-- guarantee that read_only_user is instantly granted SELECT rights to audit them!
+ALTER DEFAULT PRIVILEGES FOR ROLE app_user IN SCHEMA public GRANT SELECT ON TABLES TO read_only_user;
 
 -- Grant sequence usages for UUIDs / Auto-incrementing IDs
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_user;
