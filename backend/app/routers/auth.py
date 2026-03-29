@@ -176,17 +176,29 @@ async def get_immutable_ledger_logs(
     result = await db.execute(select(AuditLog).order_by(AuditLog.id.desc()).limit(100))
     logs = result.scalars().all()
     
-    # We serialize this out as raw dictionaries
-    return [{
-        "id": log.id,
-        "user_id": log.user_id,
-        "action": log.action,
-        "ip_address": log.ip_address,
-        "details": log.details,
-        "timestamp": log.timestamp.isoformat() if log.timestamp else None,
-        "previous_hash": log.previous_hash,
-        "hash": log.hash
-    } for log in logs]
+    import hashlib
+    output = []
+    for log in logs:
+        # Recompute the payload mathematically to detect native SQL row tampering!
+        expected_data = f"{log.previous_hash}|{log.action}|{log.ip_address}|{log.user_id}|{log.details}"
+        computed_hash = hashlib.sha256(expected_data.encode('utf-8')).hexdigest()
+        
+        # Genesis block uses "unhashed", so we ignore if it hasn't been hashed organically
+        payload_tampered = bool(log.hash != computed_hash) and (log.hash != "unhashed")
+        
+        output.append({
+            "id": log.id,
+            "user_id": log.user_id,
+            "action": log.action,
+            "ip_address": log.ip_address,
+            "details": log.details,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            "previous_hash": log.previous_hash,
+            "hash": log.hash,
+            "payload_tampered": payload_tampered
+        })
+    
+    return output
 
 @router.get("/users", response_model=List[UserResponse])
 async def list_all_users(

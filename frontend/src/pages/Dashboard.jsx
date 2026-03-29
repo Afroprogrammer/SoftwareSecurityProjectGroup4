@@ -372,11 +372,12 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {auditLogs.map((log, index) => {
-                    // Cryptographic validation logic: current block's previous_hash must match the older block's hash
+                    // Cryptographic validation logic: current block's previous_hash must match the older block's hash,
+                    // AND the backend mathematical recalculation of the payload must perfectly match the signature!
                     const olderBlock = auditLogs[index + 1];
-                    let isTampered = false;
+                    let isTampered = log.payload_tampered || false;
                     if (olderBlock && log.previous_hash !== olderBlock.hash) {
-                      isTampered = true; // HACKER ALERT!
+                      isTampered = true; // CHAIN SEVERED ALERT!
                     }
 
                     return (
