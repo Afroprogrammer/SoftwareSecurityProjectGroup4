@@ -1,13 +1,13 @@
-# Secure SDLC Authentication Project
+# LoremIpsum Secure Application
 
-This repository contains a full-stack, secure React + FastAPI authenticating dashboard designed to demonstrate enterprise-grade protection mechanisms, RBAC, and input validation.
+This repository contains a full-stack, secure React + FastAPI authenticating dashboard strictly hardened to demonstrate enterprise-grade protection mechanisms, principle of least privilege, and cryptographic immutability.
 
 ## Enterprise Security Features Included
-1. **Zero-Trust Input Validation:** Native Python regex binding directly into the unified Pydantic data schemas guarantees all payloads dropping onto the backend contain strict complexity (Uppercases, lowercases, numbers, special characters).
-2. **Cryptographic Salting:** PostgreSQL/SQLite passwords are cryptographically injected via `bcrypt` passlib schemes.
-3. **Environment Isolation:** Zero credentials exist within the source history. Code dynamically targets `.env` keys.
-4. **Decoupled Backend Logging:** Auth events inject into a standalone file `backend/logs/audit.log` distinct from DB trails for persistence.
-5. **Strict RBAC Enforcement:** Backend API models strictly override all User creations to standard roles, protecting against payload spoofing.
+1. **Zero-Trust Input Validation:** Native Python validation strictly maps and restricts data payloads to prevent memory buffer exhaustion.
+2. **Cryptographic Salting:** PostgreSQL passwords are cryptographically injected via `bcrypt` passlib schemes.
+3. **Environment Isolation:** Zero credentials exist within the source history. Code dynamically targets `.env` keys bridged securely across the Docker subnet.
+4. **Immutable Blockchain Ledger:** Auth events cleanly inject into a standalone JSON audit table mathematically secured via SHA-256 genesis chaining.
+5. **Least Privilege Containerization:** NGINX executes identically under isolated constraints running non-root ports (8080) internally.
 
 ---
 
@@ -55,10 +55,10 @@ Navigate your browser to `http://localhost:5173`. You can log directly into your
 To avoid manually installing Python, Node, and Postgres on your local machine, use our pre-configured Docker cluster!
 
 1. **Install Docker Desktop:** Ensure [Docker Desktop](https://www.docker.com/products/docker-desktop/) is running.
-2. **Duplicate the Environments:**
+2. **Setup the Unified Cryptographic Environment:**
+   Run this in the root folder of the project to generate the secure variables for the cluster.
    ```bash
-   cp backend/.env.example backend/.env
-   cp frontend/.env.example frontend/.env
+   cp .env.example .env
    ```
 3. **Boot the Cluster:**
    Open your terminal in the root folder (where `docker-compose.yml` is) and run:
@@ -66,7 +66,7 @@ To avoid manually installing Python, Node, and Postgres on your local machine, u
    docker compose up --build -d
    ```
 4. **Access the App:**
-   - **Frontend UI:** Open your browser to [http://localhost:5173](http://localhost:5173). The React application is being securely served via an Nginx router.
-   - **Backend API:** FastAPI connects directly to a pristine PostgreSQL database and exposes standard swagger docs at [http://localhost:8000/docs](http://localhost:8000/docs).
+   - **Frontend UI:** Open your browser to [http://localhost:5173](http://localhost:5173). The React application is being securely served via a Least-Privilege NGINX router running unprivileged on port 8080 internally.
+   - **Backend API:** FastAPI connects directly to a pristine PostgreSQL database. *(Note: Swagger OpenAPI documentation has been **Disabled** per strict academic security requirements to prevent API topology leaking).*
 
 > **Note:** To shut down the cluster and wipe the database securely, simply run `docker compose down -v`.
