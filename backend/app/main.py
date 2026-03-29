@@ -69,8 +69,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """Trap Access Control failures (401/403) and ledger them!"""
     ip = request.client.host if request.client else "unknown"
     if exc.status_code in [401, 403]:
-        async with AsyncSessionLocal() as db:
-            await log_audit_ledger(db, "ACCESS_VIOLATION", ip, str(exc.detail))
+        # Prevent double-logging since auth.py already injects highly specific LOGIN_FAILURE logs!
+        if request.url.path not in ["/auth/login"]:
+            async with AsyncSessionLocal() as db:
+                await log_audit_ledger(db, "ACCESS_VIOLATION", ip, str(exc.detail))
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 @app.exception_handler(RequestValidationError)
