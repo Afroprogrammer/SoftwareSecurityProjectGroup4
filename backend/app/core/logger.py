@@ -29,14 +29,9 @@ async def log_audit_ledger(db: AsyncSession, action: str, ip: str, details: str 
         new_log_data = f"{previous_hash}|{action}|{ip}|{user_id}|{safe_details}"
         new_hash = hashlib.sha256(new_log_data.encode('utf-8')).hexdigest()
 
-        # 4. Direct INSERT — stored procedure is created at startup after tables exist.
-        #    Direct insert from app_user is safe here; the REVOKE is only applied
-        #    after the sp is available. This avoids a race on first boot.
+        # 4. Execute the Stored Procedure abstraction safely
         await db.execute(
-            text("""
-                INSERT INTO audit_logs (user_id, action, ip_address, details, previous_hash, hash)
-                VALUES (:uid, :act, :ip, :det, :phash, :nhash)
-            """),
+            text("SELECT sp_insert_audit_log(:uid, :act, :ip, :det, :phash, :nhash)"),
             {
                 "uid": user_id,
                 "act": action,
