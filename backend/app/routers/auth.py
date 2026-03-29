@@ -35,7 +35,10 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
 
     if not user.is_active:
         await log_audit_ledger(db, "LOGIN_INACTIVE_DENIED", client_ip, f"Inactive user login attempt: {user.email}", user_id=user.id)
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
 
     # Lockout check
     if user.locked_until:
