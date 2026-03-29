@@ -61,14 +61,22 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
         if user.failed_login_attempts >= 5:
             user.locked_until = datetime.utcnow() + timedelta(seconds=60)
             audit_msg = f"Account locked after 5 failed attempts: {form_data.username}"
+            db.add(user)
+            await db.commit()
+            await log_audit_ledger(db, "LOGIN_FAILURE_LOCKED", client_ip, audit_msg, user_id=user.id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account locked! Try again in 60 seconds."
+            )
         
         db.add(user)
         await db.commit()
 
+        attempts_left = 5 - user.failed_login_attempts
         await log_audit_ledger(db, "LOGIN_FAILURE", client_ip, audit_msg, user_id=user.id)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail=f"Incorrect username or password. {attempts_left} attempts remaining.",
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
