@@ -9,7 +9,24 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [lockoutTimer, setLockoutTimer] = useState(0);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    let interval = null;
+    if (lockoutTimer > 0) {
+      interval = setInterval(() => {
+        setLockoutTimer(prev => {
+          if (prev <= 1) {
+             setError(''); // Clear error sequentially once lock is lifted
+             return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [lockoutTimer]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,6 +51,15 @@ const Login = () => {
     } catch (err) {
       const detail = err.response?.data?.detail;
       const errorMessage = Array.isArray(detail) ? detail[0].msg : detail;
+      
+      // Intercept Lockout Exception Computationally
+      if (err.response?.status === 403 && typeof errorMessage === 'string' && errorMessage.includes('Try again in')) {
+        const match = errorMessage.match(/in (\d+) seconds/);
+        if (match) {
+           setLockoutTimer(parseInt(match[1], 10));
+        }
+      }
+      
       setError(errorMessage || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
@@ -101,8 +127,8 @@ const Login = () => {
               </div>
             </div>
 
-            <button type="submit" className="btn" style={{ width: '100%', marginTop: '1rem', background: '#1e293b' }} disabled={isLoading}>
-              {isLoading ? 'Authenticating...' : 'Sign in'}
+            <button type="submit" className="btn" style={{ width: '100%', marginTop: '1rem', background: '#1e293b' }} disabled={isLoading || lockoutTimer > 0}>
+              {isLoading ? 'Authenticating...' : (lockoutTimer > 0 ? `Locked Out (${lockoutTimer}s)` : 'Sign in')}
             </button>
           </form>
         </div>

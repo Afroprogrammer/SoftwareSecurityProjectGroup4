@@ -79,7 +79,15 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     ip = request.client.host if request.client else "unknown"
     async with AsyncSessionLocal() as db:
         await log_audit_ledger(db, "VALIDATION_FAILURE", ip, str(exc.errors()))
-    return JSONResponse(status_code=422, content={"detail": "Input validation payload rejected securely."})
+    # Safely extract the root validation cause without leaking application topology
+    errors = exc.errors()
+    safe_msg = "Invalid input schema"
+    if errors and len(errors) > 0:
+        field = str(errors[0].get("loc", ["Unknown"])[-1])
+        reason = str(errors[0].get("msg", safe_msg))
+        safe_msg = f"Validation Error on '{field}': {reason}"
+        
+    return JSONResponse(status_code=422, content={"detail": safe_msg})
 
 app.include_router(auth.router)
 app.include_router(feedback.router)
