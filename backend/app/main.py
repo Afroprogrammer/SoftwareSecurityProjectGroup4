@@ -93,27 +93,10 @@ async def startup_event():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         
-        # Apply stored procedure and permissions after tables exist
-        await conn.execute(text("""
-            CREATE OR REPLACE FUNCTION sp_insert_audit_log(
-                p_user_id INTEGER,
-                p_action VARCHAR,
-                p_ip_address VARCHAR,
-                p_details VARCHAR,
-                p_previous_hash VARCHAR,
-                p_hash VARCHAR
-            )
-            RETURNS VOID AS $$
-            BEGIN
-                INSERT INTO audit_logs (user_id, action, ip_address, details, previous_hash, hash)
-                VALUES (p_user_id, p_action, p_ip_address, p_details, p_previous_hash, p_hash);
-            END;
-            $$ LANGUAGE plpgsql SECURITY DEFINER;
-        """))
-        
+        # We explicitly revoke physical direct DB changes from the application,
+        # forcing it to use the Stored Procedure created mathematically by the Admin.
         try:
-            await conn.execute(text("REVOKE INSERT ON audit_logs FROM app_user;"))
-            await conn.execute(text("GRANT EXECUTE ON FUNCTION sp_insert_audit_log TO app_user;"))
+            await conn.execute(text("REVOKE INSERT, UPDATE, DELETE ON audit_logs FROM app_user;"))
         except Exception as e:
             print(f"Warning: Could not set permissions. {e}")
 

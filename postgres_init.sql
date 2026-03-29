@@ -32,4 +32,25 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE O
 GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO app_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO app_user;
 
+-- ==========================================
+-- STORED PROCEDURE ABSTRACTION MATRIX
+-- ==========================================
+-- Creates the abstraction layer as the superuser (admin). 
+-- This allows SECURITY DEFINER to legally insert into tables even when app_user is blocked natively!
+CREATE OR REPLACE FUNCTION sp_insert_audit_log(
+    p_user_id INTEGER,
+    p_action VARCHAR,
+    p_ip_address VARCHAR,
+    p_details VARCHAR,
+    p_previous_hash VARCHAR,
+    p_hash VARCHAR
+)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO audit_logs (user_id, action, ip_address, details, previous_hash, hash)
+    VALUES (p_user_id, p_action, p_ip_address, p_details, p_previous_hash, p_hash);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Grant execution to the application legally
+GRANT EXECUTE ON FUNCTION sp_insert_audit_log(INTEGER, VARCHAR, VARCHAR, VARCHAR, VARCHAR, VARCHAR) TO app_user;
