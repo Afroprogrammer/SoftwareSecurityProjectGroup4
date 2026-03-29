@@ -39,8 +39,12 @@ async def login(response: Response, request: Request, form_data: OAuth2PasswordR
 
     # Lockout check
     if user.locked_until:
-        if datetime.utcnow() < user.locked_until:
-            remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
+        # Normalize timezone offsets mathematically to prevent Python strict TypeError crashes
+        now_utc = datetime.utcnow().replace(tzinfo=None)
+        locked_until_utc = user.locked_until.replace(tzinfo=None) if user.locked_until.tzinfo else user.locked_until
+        
+        if now_utc < locked_until_utc:
+            remaining = int((locked_until_utc - now_utc).total_seconds())
             await log_audit_ledger(db, "LOGIN_LOCKED_DENIED", client_ip, f"Locked account attempt: {user.email}", user_id=user.id)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
