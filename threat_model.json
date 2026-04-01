@@ -1,0 +1,106 @@
+{
+  "project": "LoremIpsum Secure Application",
+  "methodology": "STRIDE",
+  "description": "Comprehensive Threat Model addressing the 6 primary attack vectors (Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege).",
+  "architecture_nodes": [
+    { "id": "C1", "name": "React Vite Frontend", "type": "External Client Interface" },
+    { "id": "S1", "name": "FastAPI Python Backend", "type": "API Controller" },
+    { "id": "D1", "name": "PostgreSQL Database", "type": "Persistent Data Store" },
+    { "id": "A1", "name": "Anonymous Attacker", "type": "Threat Actor" }
+  ],
+  "threat_matrix": [
+    {
+      "stride_category": "Spoofing",
+      "threat_id": "T-SPOOF-01",
+      "title": "Session Hijacking via Cross-Site Scripting (XSS)",
+      "description": "An attacker dynamically injects malicious JavaScript into the browser to steal standard localStorage JWTs and mathematically spoof the victim's identity.",
+      "target_node": "C1",
+      "risk_severity": "High",
+      "mitigation_strategy": "JWTs are mathematically locked inside HttpOnly, SameSite=Lax cookies. The browser's JS engine is physically denied read-access to the session token.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Spoofing",
+      "threat_id": "T-SPOOF-02",
+      "title": "API User Enumeration",
+      "description": "An attacker sweeps the login API measuring response times or error strings to deduce which Target Emails physically exist.",
+      "target_node": "S1",
+      "risk_severity": "Medium",
+      "mitigation_strategy": "Error Obfuscation. Fake emails, bad passwords, and physically deactivated accounts identically return HTTP 401 'Incorrect username or password'.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Tampering",
+      "threat_id": "T-TAMP-01",
+      "title": "Audit Ledger Database Forgery",
+      "description": "A rogue DBA modifies the PostgreSQL logs directly using Superuser credentials to erase evidence of a breach.",
+      "target_node": "D1",
+      "risk_severity": "Critical",
+      "mitigation_strategy": "Cryptographic Blockchain Hashing. Python recalculates the SHA-256 signature matrices of every row on-the-fly. Tampering mathematically breaks the chain, launching massive UI anomaly alerts.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Tampering",
+      "threat_id": "T-TAMP-02",
+      "title": "Malicious Binary Upload",
+      "description": "Attacker uploads a malicious executable (e.g., .php or .exe) renamed with a .pdf extension.",
+      "target_node": "S1",
+      "risk_severity": "High",
+      "mitigation_strategy": "Deep Inspection Magic Bytes. The python-magic library ignores extensions and physically tests the OS-level hex headers of the buffer.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Repudiation",
+      "threat_id": "T-REP-01",
+      "title": "Action Denial",
+      "description": "A malicious user successfully deletes files or commits actions, then claims they never authorized the transaction.",
+      "target_node": "S1",
+      "risk_severity": "Medium",
+      "mitigation_strategy": "The Immutable Ledger strictly logs user_id, Action, and IP Address on all critical events natively.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Information Disclosure",
+      "threat_id": "T-INFO-01",
+      "title": "Encrypted Payload Theft",
+      "description": "Hackers compromise the Postgres database disk and dump the tables securely, attempting to read sensitive student Feedback contents.",
+      "target_node": "D1",
+      "risk_severity": "Critical",
+      "mitigation_strategy": "Fernet AES-GCM Encryption. Feedback text and attachments are encrypted symmetrically natively prior to database writes. Keys are vaulted in isolated RAM environments via .env parameters.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Denial of Service",
+      "threat_id": "T-DOS-01",
+      "title": "Automated Brute Force / CPU Exhaustion",
+      "description": "A botnet unleashes 10,000 requests per second attempting to crack an Admin password, simultaneously consuming all Database connection pools.",
+      "target_node": "S1",
+      "risk_severity": "High",
+      "mitigation_strategy": "SlowAPI edge routing artificially drops external IPs exceeding 5 requests/minute. The Database natively locks specific target accounts for 60 seconds after 5 failed crypt-hashes.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Elevation of Privilege",
+      "threat_id": "T-ELEV-01",
+      "title": "Vertical Privilege Escalation via Schema Bypass",
+      "description": "A standard user sends the API a forged JSON structure injecting {'role': 'admin'} during account creation.",
+      "target_node": "S1",
+      "risk_severity": "Critical",
+      "mitigation_strategy": "Pydantic strict schema exclusion. The API computationally drops unapproved JSON payloads and manually hardcodes new_user.role = 'user' natively.",
+      "status": "Mitigated"
+    },
+    {
+      "stride_category": "Elevation of Privilege",
+      "threat_id": "T-ELEV-02",
+      "title": "Container Execution Escape",
+      "description": "A zero-day exploit in FastAPI allows an attacker to execute a reverse-shell inside the Docker container, gaining root host access.",
+      "target_node": "C1",
+      "risk_severity": "High",
+      "mitigation_strategy": "Principle of Least Privilege. Containers execute inherently via the unprivileged USER directive. docker-compose.yml implements `security_opt: - no-new-privileges:true` enforcing physical kernel blocks against SUID/SGID root escalation.",
+      "status": "Mitigated"
+    }
+  ],
+  "review_status": "Approved",
+  "evaluator": "Group 4 Architect AI",
+  "date_compiled": "2026-03-31"
+}
